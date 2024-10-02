@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binary Audio Decoder</title>
+</head>
+<body>
+    <h1>Binary Audio Decoder</h1>
+    <textarea id="outputText" rows="4" cols="50" placeholder="Decoded text will appear here..." readonly></textarea><br>
+    <button id="startButton">Start Listening</button>
+    
+    <script>
+        const frequency = 20000; // Frequency of 20 kHz
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let isListening = false;
+
+        async function startListening() {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const microphone = audioContext.createMediaStreamSource(stream);
+            const analyser = audioContext.createAnalyser();
+            microphone.connect(analyser);
+            analyser.fftSize = 2048;
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            isListening = true;
+            listen(dataArray, analyser);
+        }
+
+        function listen(dataArray, analyser) {
+            if (!isListening) return;
+
+            analyser.getByteFrequencyData(dataArray);
+            const detectedBits = detectBinary(dataArray);
+            const decodedMessage = decodeBinary(detectedBits);
+
+            if (decodedMessage) {
+                document.getElementById('outputText').value = decodedMessage;
+            }
+
+            requestAnimationFrame(() => listen(dataArray, analyser));
+        }
+
+        function detectBinary(dataArray) {
+            const threshold = 128; // Threshold to distinguish between 0 and 1
+            const bits = [];
+            dataArray.forEach(value => {
+                bits.push(value > threshold ? '1' : '0');
+            });
+            return bits.join('');
+        }
+
+        function decodeBinary(bits) {
+            const byteArray = [];
+            for (let i = 0; i < bits.length; i += 8) {
+                const byte = bits.slice(i, i + 8).join('');
+                if (byte.length === 8) {
+                    byteArray.push(String.fromCharCode(parseInt(byte, 2)));
+                }
+            }
+            return byteArray.join('');
+        }
+
+        document.getElementById('startButton').addEventListener('click', () => {
+            startListening();
+        });
+    </script>
+</body>
+</html>
