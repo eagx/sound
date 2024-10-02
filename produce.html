@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text to Binary Translator</title>
+</head>
+<body>
+    <h1>Text to Binary Translator</h1>
+    <textarea id="inputText" rows="4" cols="50" placeholder="Enter your text here..."></textarea><br>
+    <button id="translateButton">Translate & Speak</button>
+    
+    <script>
+        function textToBinary(text) {
+            return text.split('').map(char => {
+                return char.charCodeAt(0).toString(2).padStart(8, '0');
+            }).join(' ');
+        }
+
+        function playBinarySound(binaryString) {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const sampleRate = 44100;
+            const duration = 0.1; // Duration of each binary digit in seconds
+            const frequency = 200000; // Frequency of 20 kHz
+            const buffer = audioContext.createBuffer(1, sampleRate * duration * binaryString.length, sampleRate);
+            const data = buffer.getChannelData(0);
+            
+            binaryString.split('').forEach((bit, index) => {
+                const startSample = index * sampleRate * duration;
+                const endSample = startSample + sampleRate * duration;
+                for (let i = startSample; i < endSample; i++) {
+                    // Create a sine wave for '1', silence for '0'
+                    data[i] = bit === '1' ? Math.sin(2 * Math.PI * frequency * (i / sampleRate)) : 0;
+                }
+            });
+
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioContext.destination);
+            source.start();
+        }
+
+        document.getElementById('translateButton').addEventListener('click', () => {
+            const inputText = document.getElementById('inputText').value;
+            const binary = textToBinary(inputText);
+            console.log(binary); // For debugging: see the binary output in console
+            playBinarySound(binary.replace(/ /g, '')); // Remove spaces for sound generation
+        });
+    </script>
+</body>
+</html>
